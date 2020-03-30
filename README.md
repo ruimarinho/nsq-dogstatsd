@@ -6,7 +6,7 @@
 
 ## Introduction
 
-`nsq-dogstatsd` is an utility that lets you graph [nsq](http://nsq.io) stats on [Datadog](https://www.datadoghq.com) by sending custom metrics via [DogStatsD](http://docs.datadoghq.com/guides/dogstatsd/), allowing you to create beautiful dashboards with powerful monitors.
+`nsq-dogstatsd` is an utility that lets you graph [nsq](https://nsq.io) stats on [Datadog](https://www.datadoghq.com) by sending custom metrics via [DogStatsD](http://docs.datadoghq.com/guides/dogstatsd/), allowing you to create beautiful dashboards with powerful monitors.
 
 ![datadog nsq dashboard](docs/images/dashboard.png)
 
