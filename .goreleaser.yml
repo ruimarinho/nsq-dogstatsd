@@ -1,13 +1,13 @@
-archive:
-  format: tar.gz
-  replacements:
-    amd64: x86_64
-    darwin: macOS
-    linux: Linux
-    windows: Windows
-  format_overrides:
-    - goos: windows
-      format: zip
+archives:
+  - format: tar.gz
+    replacements:
+      amd64: x86_64
+      darwin: macOS
+      linux: Linux
+      windows: Windows
+    format_overrides:
+      - goos: windows
+        format: zip
 
 build:
   binary: nsq_to_dogstatsd
@@ -22,5 +22,6 @@ build:
   main: nsq_to_dogstatsd.go
 
 dockers:
-  - image: ruimarinho/nsq-dogstatsd
-    latest: true
+  - image_templates:
+      - 'ruimarinho/nsq-dogstatsd:{{ .Tag }}'
+      - ruimarinho/nsq-dogstatsd:latest
