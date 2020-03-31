@@ -1,4 +1,4 @@
-package resolver
+package resolver_test
 
 import (
 	"net/http"
@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"testing"
 
+	. "github.com/ruimarinho/nsq-dogstatsd/resolver"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -31,7 +32,7 @@ func TestResolveNodes_NSQLookupdAddresses(t *testing.T) {
 	nsqlookupdURL, err := url.Parse(nsqlookupdServer.URL)
 	assert.Nil(t, err)
 
-	producers, err := resolveNodes([]string{}, []string{nsqlookupdURL.Host})
+	producers, err := ResolveNodes([]string{}, []string{nsqlookupdURL.Host})
 	assert.Nil(t, err)
 	assert.Len(t, producers, 1)
 }
@@ -47,7 +48,7 @@ func TestResolveNodes_NSQLookupdAddresses_Error(t *testing.T) {
 	nsqlookupdURL, parseErr := url.Parse(nsqlookupdServer.URL)
 	assert.Nil(t, parseErr)
 
-	_, err := resolveNodes([]string{}, []string{nsqlookupdURL.Host})
+	_, err := ResolveNodes([]string{}, []string{nsqlookupdURL.Host})
 	assert.NotNil(t, err)
 }
 
@@ -70,7 +71,7 @@ func TestResolveNodes_NSQDAddresses(t *testing.T) {
 	nsqdURL, err := url.Parse(nsqdServer.URL)
 	assert.Nil(t, err)
 
-	producers, err := resolveNodes([]string{nsqdURL.Host}, []string{})
+	producers, err := ResolveNodes([]string{nsqdURL.Host}, []string{})
 	assert.Nil(t, err)
 	assert.Len(t, producers, 1)
 }
@@ -86,7 +87,7 @@ func TestResolveNodes_NSQDAddresses_Error(t *testing.T) {
 	nsqdURL, parseErr := url.Parse(nsqdServer.URL)
 	assert.Nil(t, parseErr)
 
-	_, err := resolveNodes([]string{nsqdURL.Host, nsqdURL.Host}, []string{})
+	_, err := ResolveNodes([]string{nsqdURL.Host, nsqdURL.Host}, []string{})
 	assert.NotNil(t, err)
 }
 
@@ -109,7 +110,7 @@ func TestResolveNodes_NSQDAddresses_Duplicates_Ignored(t *testing.T) {
 	nsqdURL, err := url.Parse(nsqdServer.URL)
 	assert.Nil(t, err)
 
-	producers, err := resolveNodes([]string{nsqdURL.Host, nsqdURL.Host}, []string{})
+	producers, err := ResolveNodes([]string{nsqdURL.Host, nsqdURL.Host}, []string{})
 	assert.Nil(t, err)
 	assert.Len(t, producers, 1)
 }

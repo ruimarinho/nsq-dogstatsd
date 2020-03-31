@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/DataDog/datadog-go/statsd"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // NewDogStatsDClient returns a preconfigured DogStatsD client with namespace and global tags.
@@ -17,7 +17,7 @@ func NewDogStatsDClient(dogstatsdAddress string, namespace string, tags []string
 	client.Namespace = fmt.Sprintf("%s.", namespace)
 	client.Tags = tags
 
-	log.WithFields(log.Fields{"namespace": namespace, "tags": tags}).Info("configured dogstatsd client")
+	log.WithFields(log.Fields{"namespace": namespace, "tags": tags}).Debug("configured dogstatsd client")
 
 	return client, nil
 }

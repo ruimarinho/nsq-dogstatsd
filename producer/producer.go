@@ -13,22 +13,17 @@ import (
 // Producer represents a nsqd node.
 type Producer struct {
 	Version          string `json:"version"`
-	RemoteAddress    string `json:"remote_address, omitempty"`
+	RemoteAddress    string `json:"remote_address,omitempty"`
 	BroadcastAddress string `json:"broadcast_address"`
 	Hostname         string `json:"hostname"`
 	HTTPPort         int    `json:"http_port"`
 	TCPPort          int64  `json:"tcp_port"`
-	StartTime        int    `json:"start_time, omitempty"`
-	tags             []string
+	StartTime        int    `json:"start_time,omitempty"`
 }
 
 // GetTags returns the Producer tags including, by default, a tag with its hostname.
 func (p Producer) GetTags() []string {
-	if len(p.tags) == 0 {
-		p.tags = []string{fmt.Sprintf("node:%s", p.Hostname)}
-	}
-
-	return p.tags
+	return []string{fmt.Sprintf("node:%s", p.Hostname)}
 }
 
 // Stats wraps /stats data.

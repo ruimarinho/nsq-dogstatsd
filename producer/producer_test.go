@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"testing"
 
+	. "github.com/ruimarinho/nsq-dogstatsd/producer"
 	"github.com/stretchr/testify/assert"
 )
 

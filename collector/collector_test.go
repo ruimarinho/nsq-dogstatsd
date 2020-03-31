@@ -36,14 +36,14 @@ func (f fetcherErrorMock) SetBaseURL(address string) {
 }
 
 func TestGetInfo_fetchError(t *testing.T) {
-	collector := NSQDCollector{fetcher: fetcherErrorMock{}}
+	collector := NSQDCollector{Fetcher: fetcherErrorMock{}}
 	_, err := collector.GetInfo()
 
 	assert.Error(t, err)
 }
 
 func TestGetInfo(t *testing.T) {
-	collector := NSQDCollector{fetcher: fetcherMock{}}
+	collector := NSQDCollector{Fetcher: fetcherMock{}}
 	info, err := collector.GetInfo()
 
 	assert.NoError(t, err)
@@ -65,7 +65,7 @@ func (f fetcherInvalidStatusCodeErrorMock) SetBaseURL(address string) {
 }
 
 func TestGetInfo_invalidStatusCode(t *testing.T) {
-	collector := NSQDCollector{fetcher: fetcherInvalidStatusCodeErrorMock{}}
+	collector := NSQDCollector{Fetcher: fetcherInvalidStatusCodeErrorMock{}}
 	_, err := collector.GetInfo()
 
 	assert.EqualError(t, err, "response code was 500")
@@ -86,21 +86,21 @@ func (f fetcherInvalidJSONErrorMock) SetBaseURL(address string) {
 }
 
 func TestGetNodes_fetchJSONError(t *testing.T) {
-	collector := NSQDCollector{fetcher: fetcherInvalidJSONErrorMock{}}
+	collector := NSQDCollector{Fetcher: fetcherInvalidJSONErrorMock{}}
 	_, err := collector.GetNodes()
 
 	assert.EqualError(t, err, "invalid character 'o' in literal false (expecting 'a')")
 }
 
 func TestGetNodes_fetchError(t *testing.T) {
-	collector := NSQDCollector{fetcher: fetcherErrorMock{}}
+	collector := NSQDCollector{Fetcher: fetcherErrorMock{}}
 	_, err := collector.GetNodes()
 
 	assert.Error(t, err)
 }
 
 func TestGetNodes(t *testing.T) {
-	collector := NSQDCollector{fetcher: fetcherMock{}}
+	collector := NSQDCollector{Fetcher: fetcherMock{}}
 	nodes, err := collector.GetNodes()
 
 	assert.NoError(t, err)

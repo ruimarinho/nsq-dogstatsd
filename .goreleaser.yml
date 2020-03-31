@@ -20,8 +20,3 @@ build:
   goarch:
     - amd64
   main: nsq_to_dogstatsd.go
-
-dockers:
-  - image_templates:
-      - 'ruimarinho/nsq-dogstatsd:{{ .Tag }}'
-      - ruimarinho/nsq-dogstatsd:latest

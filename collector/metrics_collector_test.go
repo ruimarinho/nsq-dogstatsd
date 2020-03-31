@@ -5,50 +5,51 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"regexp"
 	"strconv"
 	"testing"
 
+	"github.com/ruimarinho/nsq-dogstatsd/producer"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewGauge(t *testing.T) {
-	metric := newGauge("qux", float64(1), []string{"foo:tag"})
-
-	assert.Equal(t, metric, Metric{
-		Name:  "qux",
-		Value: 1,
-		Rate:  1,
-		Type:  "gauge",
-		Tags:  []string{"foo:tag"},
-	})
-}
-
-func TestGauge(t *testing.T) {
 	var tests = []struct{ value interface{} }{
 		{true},
 		{int(1)},
 		{int32(1)},
 		{int64(1)},
 		{uint64(1)},
+		{float32(1)},
+		{float64(1)},
 	}
 
 	for _, tt := range tests {
-		metric := gauge("qux", tt.value, []string{"foo:tag"})
+		collector := NewCollector(producer.Producer{BroadcastAddress: "127.0.0.1", HTTPPort: 80, Hostname: "localhost"}, []*regexp.Regexp{})
+		metric := collector.NewGauge("qux", tt.value, []string{"foo:tag"})
 
-		assert.Equal(t, metric, Metric{
+		assert.Equal(t, Metric{
 			Name:  "qux",
 			Value: 1,
 			Rate:  1,
 			Type:  "gauge",
-			Tags:  []string{"foo:tag"},
-		})
+			Tags:  []string{"node:localhost", "foo:tag"},
+		}, metric)
 	}
 }
 
-func TestGauge_invalid(t *testing.T) {
-	assert.Panics(t, func() {
-		gauge("foo", float64(1), []string{})
-	})
+func TestGauge_InvalidType(t *testing.T) {
+	collector := NewCollector(producer.Producer{BroadcastAddress: "127.0.0.1", HTTPPort: 80, Hostname: "localhost"}, []*regexp.Regexp{})
+	metric := collector.NewGauge("foo", "string", nil)
+
+	assert.Empty(t, metric)
+}
+
+func TestNewGauge_ExcludedMetrics(t *testing.T) {
+	collector := NewCollector(producer.Producer{BroadcastAddress: "127.0.0.1", HTTPPort: 80, Hostname: "localhost"}, []*regexp.Regexp{regexp.MustCompile(".*qux.*")})
+	metric := collector.NewGauge("qux", float64(1), []string{"foo:tag"})
+
+	assert.Empty(t, metric)
 }
 
 func TestCollectMetrics(t *testing.T) {
@@ -117,9 +118,11 @@ func TestCollectMetrics(t *testing.T) {
 	assert.Nil(t, err)
 
 	port, err := strconv.Atoi(strPort)
+
 	assert.Nil(t, err)
 
-	metrics, err := collectMetrics(Producer{BroadcastAddress: host, HTTPPort: port, Hostname: "localhost"})
+	collector := NewCollector(producer.Producer{BroadcastAddress: host, HTTPPort: port, Hostname: "localhost"}, []*regexp.Regexp{})
+	metrics, err := collector.CollectMetrics()
 	assert.Nil(t, err)
 
 	expected := []Metric{
@@ -328,10 +331,65 @@ func TestCollectMetrics(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, metrics, expected)
+	assert.Equal(t, expected, metrics)
 }
 
-func TestCollectMetrics_error(t *testing.T) {
+func TestCollectMetrics_ExcludedMetrics(t *testing.T) {
+	server := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte(`{
+				"status_code": 200,
+				"status_txt": "OK",
+				"data": {
+					"version": "1.0.0-compat",
+					"health": "OK",
+					"start_time": 1515289281,
+					"topics": [],
+					"memory": {
+						"heap_objects": 6263,
+						"heap_idle_bytes": 892928,
+						"heap_in_use_bytes": 1695744,
+						"heap_released_bytes": 0,
+						"gc_pause_usec_100": 0,
+						"gc_pause_usec_99": 0,
+						"gc_pause_usec_95": 0,
+						"next_gc_bytes": 4473924,
+						"gc_total_runs": 0
+					}
+				}
+			}`))
+		}))
+
+	defer server.Close()
+
+	url, err := url.Parse(server.URL)
+	assert.Nil(t, err)
+
+	host, strPort, err := net.SplitHostPort(url.Host)
+	assert.Nil(t, err)
+
+	port, err := strconv.Atoi(strPort)
+
+	assert.Nil(t, err)
+
+	collector := NewCollector(producer.Producer{BroadcastAddress: host, HTTPPort: port, Hostname: "localhost"}, []*regexp.Regexp{regexp.MustCompile("memory.*")})
+	metrics, err := collector.CollectMetrics()
+	assert.Nil(t, err)
+
+	expected := []Metric{
+		Metric{
+			Rate:  1,
+			Type:  "gauge",
+			Tags:  []string{"node:localhost"},
+			Name:  "topic.count",
+			Value: 0,
+		},
+	}
+
+	assert.Equal(t, expected, metrics)
+}
+
+func TestCollectMetrics_Error(t *testing.T) {
 	server := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(`{"status_code":500}`))
@@ -342,12 +400,14 @@ func TestCollectMetrics_error(t *testing.T) {
 	url, err := url.Parse(server.URL)
 	assert.Nil(t, err)
 
-	host, port, err := net.SplitHostPort(url.Host)
+	host, strPort, err := net.SplitHostPort(url.Host)
 	assert.Nil(t, err)
 
-	sport, err := strconv.Atoi(port)
+	port, err := strconv.Atoi(strPort)
 	assert.Nil(t, err)
 
-	_, errMetrics := collectMetrics(Producer{BroadcastAddress: host, HTTPPort: sport, Hostname: "net"})
+	collector := NewCollector(producer.Producer{BroadcastAddress: host, HTTPPort: port, Hostname: "localhost"}, []*regexp.Regexp{})
+	_, errMetrics := collector.CollectMetrics()
+
 	assert.NotNil(t, errMetrics)
 }

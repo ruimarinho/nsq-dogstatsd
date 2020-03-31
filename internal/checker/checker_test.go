@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/ruimarinho/nsq-dogstatsd/internal"
 	"github.com/stretchr/testify/assert"
+	. "github.com/ruimarinho/nsq-dogstatsd/internal/checker"
 )
 
 func TestCheckAddresses(t *testing.T) {
@@ -19,7 +19,7 @@ func TestCheckAddresses(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result := internal.CheckAddresses(test.input)
+		result := CheckAddresses(test.input)
 
 		if test.expected != nil {
 			assert.Error(t, result)

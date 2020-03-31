@@ -1,8 +1,6 @@
 # nsq-dogstatsd
 
-## Status
-
-[![build status][travis-image]][travis-url]
+![build status](https://github.com/ruimarinho/nsq-dogstatsd/workflows/Tests/badge.svg?branch=master)
 
 ## Introduction
 
@@ -49,25 +47,35 @@ Let's assume that you either have the Datadog Agent or a standalone DogStatsD se
 Usage of nsq_to_dogstatsd:
 
   -dogstatsd-address string
-        <address>:<port> to connect to dogstatsd (default "127.0.0.1:8125")
+	<address>:<port> to connect to dogstatsd (default "127.0.0.1:8125")
+  -exclude-metrics value
+	exclude metrics using a regular expression pattern (can be specified multiple times)
   -interval duration
-        interval for collecting metrics (default "none")
+	interval for collecting metrics (default "none")
   -lookupd-http-address value
-        <address>:<port> of nsqlookupd to query nodes for
+	<address>:<port> of nsqlookupd to query nodes for
   -namespace string
-        namespace for metrics (default "nsq")
+	namespace for metrics (default "nsq")
   -nsqd-http-address value
-        <address>:<port> of nsqd node to query stats for
+	<address>:<port> of nsqd node to query stats for
   -tag value
-        add global tags (can be specified multiple times)
+	add global tags (can be specified multiple times)
+  -version
+	show version information
 ```
 
 If both `lookupd-http-address` and `nsqd-http-address` are provided, all nsqd nodes will be used - those provided by `nsqlookupd` in addition to those defined separately by the `nsqd-http-address` flag. Duplicate nsqd nodes will be ignored.
 
-The following example connects to a local `nsqlookupd` instance running on `127.0.0.1:4161` and uses a polling interval of 5 seconds to query for statistics while applying a global tag of `environment:development`: 
+The following example connects to a local `nsqlookupd` instance running on `127.0.0.1:4161` and uses a polling interval of 5 seconds to query for statistics while applying a global tag of `environment:development`:
 
 ```sh
 ❯ docker run --rm ruimarinho/nsq-dogstatsd -lookupd-http-address 127.0.0.1:4161 -interval 5s -tag environment:development
+```
+
+Connecting to a local `nsqd` directly is also possible. Consider an instance running on `127.0.0.1:4141`:
+
+```sh
+❯ docker run --rm ruimarinho/nsq-dogstatsd -nsqd-http-address 127.0.0.1:4151
 ```
 
 Use the [Metrics > Summary](https://app.datadoghq.com/metric/summary) view of Datadog to check if your metrics are being sent correctly. It may take a few minutes for them to appear for the first time.
@@ -102,6 +110,3 @@ Here's how you can can create a monitor:
 ## License
 
 MIT
-
-[travis-image]: https://img.shields.io/travis/ruimarinho/nsq-dogstatsd.svg?style=flat-square
-[travis-url]: https://travis-ci.org/ruimarinho/nsq-dogstatsd

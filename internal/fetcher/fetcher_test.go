@@ -6,24 +6,19 @@ import (
 	"net/url"
 	"testing"
 
+	. "github.com/ruimarinho/nsq-dogstatsd/internal/fetcher"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestFetcher_GetURL(t *testing.T) {
-	fetcher := &NSQDFetcher{baseURL: "http://127.0.0.1:4151"}
-
-	assert.Equal(t, fetcher.GetURL(""), "http://127.0.0.1:4151/")
-}
-
-func TestFetcher_SetBaseURL(t *testing.T) {
+func TestFetcher_GetSetURL(t *testing.T) {
 	fetcher := &NSQDFetcher{}
 	fetcher.SetBaseURL("127.0.0.1:4151")
 
-	assert.Equal(t, fetcher.baseURL, "http://127.0.0.1:4151")
+	assert.Equal(t, fetcher.GetURL("foo"), "http://127.0.0.1:4151/foo")
 }
 
 func TestFetcher_Fetch_invalidPath(t *testing.T) {
-	fetcher := newFetcher("127.0.0.1:4151")
+	fetcher := NewFetcher("127.0.0.1:4151")
 	_, err := fetcher.Fetch("%")
 
 	assert.Error(t, err)
@@ -40,7 +35,7 @@ func TestFetcher_Fetch_invalidStatusCode(t *testing.T) {
 	nsqdURL, parseErr := url.Parse(server.URL)
 	assert.NoError(t, parseErr)
 
-	fetcher := newFetcher(nsqdURL.Host)
+	fetcher := NewFetcher(nsqdURL.Host)
 	_, err := fetcher.Fetch("")
 
 	assert.EqualError(t, err, "response code was 500")
@@ -57,7 +52,7 @@ func TestFetcher_Fetch(t *testing.T) {
 	nsqdURL, parseErr := url.Parse(server.URL)
 	assert.NoError(t, parseErr)
 
-	fetcher := newFetcher(nsqdURL.Host)
+	fetcher := NewFetcher(nsqdURL.Host)
 	body, err := fetcher.Fetch("")
 
 	assert.NoError(t, err)

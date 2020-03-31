@@ -3,10 +3,10 @@ package resolver
 import (
 	"sync"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/ruimarinho/nsq-dogstatsd/collector"
 	"github.com/ruimarinho/nsq-dogstatsd/internal/fetcher"
 	"github.com/ruimarinho/nsq-dogstatsd/producer"
+	log "github.com/sirupsen/logrus"
 )
 
 // ResolveNodes queries NSQD and NSQLookupd servers to retrieve information about producer nodes.
@@ -42,7 +42,7 @@ func ResolveNodes(nsqdHTTPAddresses []string, lookupdHTTPAddresses []string) ([]
 		go func(address string) {
 			defer wg.Done()
 
-			log.WithField("address", address).Print("resolving nodes from nsqlookupd")
+			log.WithField("address", address).Debug("resolving nodes from nsqlookupd")
 
 			fetcher := fetcher.NewFetcher(address)
 			collector := collector.NSQDCollector{Fetcher: fetcher}
@@ -76,13 +76,13 @@ func ResolveNodes(nsqdHTTPAddresses []string, lookupdHTTPAddresses []string) ([]
 			}
 
 			if addresses[producer.HTTPAddress()] {
-				log.WithField("address", producer.HTTPAddress()).Print("skipping duplicate address")
+				log.WithField("address", producer.HTTPAddress()).Debug("skipping duplicate address")
 				continue
 			}
 
 			addresses[producer.HTTPAddress()] = true
 
-			log.WithField("address", producer.HTTPAddress()).Print("added address")
+			log.WithField("address", producer.HTTPAddress()).Info("added address")
 
 			producers = append(producers, producer)
 		case err := <-errChan:
