@@ -24,4 +24,4 @@ build:
 dockers:
  - image_templates:
     - "ruimarinho/nsq-dogstatsd:latest"
-    - "ruimarinho/nsq-dogstatsd:{{ .Tag }}"
+    - "ruimarinho/nsq-dogstatsd:{{ .Version }}"
