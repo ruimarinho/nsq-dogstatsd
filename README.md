@@ -47,21 +47,23 @@ Let's assume that you either have the Datadog Agent or a standalone DogStatsD se
 Usage of nsq_to_dogstatsd:
 
   -dogstatsd-address string
-	<address>:<port> to connect to dogstatsd (default "127.0.0.1:8125")
+      <address>:<port> to connect to dogstatsd (default "127.0.0.1:8125")
   -exclude-metrics value
-	exclude metrics using a regular expression pattern (can be specified multiple times)
+      exclude metrics using a regular expression pattern (can be specified multiple times)
   -interval duration
-	interval for collecting metrics (default "none")
+      interval for collecting metrics (default "none")
   -lookupd-http-address value
-	<address>:<port> of nsqlookupd to query nodes for
+      <address>:<port> of nsqlookupd to query nodes for (can be specified multiple times)
   -namespace string
-	namespace for metrics (default "nsq")
+      namespace for metrics (default "nsq")
   -nsqd-http-address value
-	<address>:<port> of nsqd node to query stats for
+      <address>:<port> of nsqd node to query stats for (can be specified multiple times)
   -tag value
-	add global tags (can be specified multiple times)
+      add global tags (can be specified multiple times)
+  -verbose int
+      verbosity level (0-3)
   -version
-	show version information
+      show version information
 ```
 
 If both `lookupd-http-address` and `nsqd-http-address` are provided, all nsqd nodes will be used - those provided by `nsqlookupd` in addition to those defined separately by the `nsqd-http-address` flag. Duplicate nsqd nodes will be ignored.
@@ -79,6 +81,15 @@ Connecting to a local `nsqd` directly is also possible. Consider an instance run
 ```
 
 Use the [Metrics > Summary](https://app.datadoghq.com/metric/summary) view of Datadog to check if your metrics are being sent correctly. It may take a few minutes for them to appear for the first time.
+
+Verbosity level can be configured as per below:
+
+| Level (int) | Level (category) |
+|-------------|------------------|
+| 0           | error            |
+| 1           | warning          |
+| 2           | info             |
+| 3           | debug            |
 
 ## Monitors
 
