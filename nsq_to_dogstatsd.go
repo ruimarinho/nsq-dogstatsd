@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/DataDog/datadog-go/statsd"
+	"github.com/DataDog/datadog-go/v5/statsd"
 	"github.com/ruimarinho/nsq-dogstatsd/collector"
 	"github.com/ruimarinho/nsq-dogstatsd/dogstatsd"
 	"github.com/ruimarinho/nsq-dogstatsd/internal/checker"
@@ -66,6 +66,11 @@ func sendMetrics(producers []producer.Producer, client *statsd.Client, interval 
 	}
 
 	wg.Wait()
+
+	if err := client.Flush(); err != nil {
+		errChan <- err
+		return
+	}
 
 	if interval.Seconds() == 0 {
 		doneChan <- true
