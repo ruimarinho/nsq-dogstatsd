@@ -6,7 +6,6 @@ import (
 	"net"
 	"strconv"
 
-	"github.com/nsqio/nsq/nsqd"
 	"github.com/ruimarinho/nsq-dogstatsd/internal/fetcher"
 )
 
@@ -46,13 +45,60 @@ type MemoryStats struct {
 	GCTotalRuns       uint32 `json:"gc_total_runs"`
 }
 
+// LatencyStats wraps /stats end-to-end processing latency data.
+type LatencyStats struct {
+	Count       int                  `json:"count"`
+	Percentiles []map[string]float64 `json:"percentiles"`
+}
+
+// ClientStats wraps /stats client data.
+type ClientStats struct {
+	ClientID      string `json:"client_id"`
+	Hostname      string `json:"hostname"`
+	Version       string `json:"version"`
+	RemoteAddress string `json:"remote_address"`
+	State         int32  `json:"state"`
+	ReadyCount    int64  `json:"ready_count"`
+	InFlightCount int64  `json:"in_flight_count"`
+	MessageCount  uint64 `json:"message_count"`
+	FinishCount   uint64 `json:"finish_count"`
+	RequeueCount  uint64 `json:"requeue_count"`
+	UserAgent     string `json:"user_agent"`
+}
+
+// ChannelStats wraps /stats channel data.
+type ChannelStats struct {
+	ChannelName          string        `json:"channel_name"`
+	Depth                int64         `json:"depth"`
+	BackendDepth         int64         `json:"backend_depth"`
+	InFlightCount        int           `json:"in_flight_count"`
+	DeferredCount        int           `json:"deferred_count"`
+	MessageCount         uint64        `json:"message_count"`
+	RequeueCount         uint64        `json:"requeue_count"`
+	TimeoutCount         uint64        `json:"timeout_count"`
+	Clients              []ClientStats `json:"clients"`
+	Paused               bool          `json:"paused"`
+	E2eProcessingLatency *LatencyStats `json:"e2e_processing_latency"`
+}
+
+// TopicStats wraps /stats topic data.
+type TopicStats struct {
+	TopicName            string         `json:"topic_name"`
+	Channels             []ChannelStats `json:"channels"`
+	Depth                int64          `json:"depth"`
+	BackendDepth         int64          `json:"backend_depth"`
+	MessageCount         uint64         `json:"message_count"`
+	Paused               bool           `json:"paused"`
+	E2eProcessingLatency *LatencyStats  `json:"e2e_processing_latency"`
+}
+
 // StatsData is an embedded Stats type.
 type StatsData struct {
-	Version   string            `json:"version"`
-	Health    string            `json:"health"`
-	StartTime int64             `json:"start_time"`
-	Topics    []nsqd.TopicStats `json:"topics"`
-	Memory    MemoryStats       `json:"memory"`
+	Version   string       `json:"version"`
+	Health    string       `json:"health"`
+	StartTime int64        `json:"start_time"`
+	Topics    []TopicStats `json:"topics"`
+	Memory    MemoryStats  `json:"memory"`
 }
 
 // GetStats retrieves and parses the statistics of a nsqd.
