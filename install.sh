@@ -58,8 +58,11 @@ is_supported_platform() {
   found=1
   case "$platform" in
     darwin/amd64) found=0 ;;
+    darwin/arm64) found=0 ;;
     linux/amd64) found=0 ;;
+    linux/arm64) found=0 ;;
     windows/amd64) found=0 ;;
+    windows/arm64) found=0 ;;
   esac
   return $found
 }
@@ -79,8 +82,8 @@ adjust_version() {
   fi
 }
 adjust_format() {
-  # change format (tar.gz or zip) based on ARCH
-  case ${ARCH} in
+  # change format (tar.gz or zip) based on OS
+  case ${OS} in
     windows) FORMAT=zip ;;
   esac
   true
@@ -308,14 +311,14 @@ adjust_arch
 
 echo "$PREFIX: found version ${VERSION} for ${OS}/${ARCH}"
 
-NAME=${BINARY}_${VERSION}_${OS}_${ARCH}
+NAME=${REPO}_${VERSION#v}_${OS}_${ARCH}
 TARBALL=${NAME}.${FORMAT}
 TARBALL_URL=${GITHUB_DOWNLOAD}/${VERSION}/${TARBALL}
-CHECKSUM=nsq-dogstatsd_checksums.txt
+CHECKSUM=${REPO}_${VERSION#v}_checksums.txt
 CHECKSUM_URL=${GITHUB_DOWNLOAD}/${VERSION}/${CHECKSUM}
 
 # Adjust binary name if windows
-if [ "$OS" = "windows" ]; then
+if [ "$OS" = "Windows" ]; then
   BINARY="${BINARY}.exe"
 fi
 
