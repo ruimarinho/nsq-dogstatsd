@@ -41,41 +41,20 @@ func init() {
 	flag.Var(&nsqlookupdHTTPAddresses, "lookupd-http-address", "<address>:<port> of nsqlookupd to query nodes for (can be specified multiple times)")
 }
 
-func sendMetrics(producers []producer.Producer, client *statsd.Client, interval time.Duration, excludeMetrics []*regexp.Regexp, doneChan chan bool, errChan chan error) {
-	var wg sync.WaitGroup
-	for _, p := range producers {
-		wg.Add(1)
-
-		go func(p producer.Producer) {
-			defer wg.Done()
-
-			c := collector.NewCollector(p, excludeMetrics)
-			metrics, err := c.CollectMetrics()
-			if err != nil {
-				errChan <- err
-				return
-			}
-
-			for _, m := range metrics {
-				if err = client.Gauge(m.Name, m.Value, m.Tags, m.Rate); err != nil {
-					errChan <- err
-					return
-				}
-			}
-		}(p)
+func collectNode(p producer.Producer, client *statsd.Client, excludeMetrics []*regexp.Regexp) error {
+	c := collector.NewCollector(p, excludeMetrics)
+	metrics, err := c.CollectMetrics()
+	if err != nil {
+		return err
 	}
 
-	wg.Wait()
-
-	if err := client.Flush(); err != nil {
-		errChan <- err
-		return
+	for _, m := range metrics {
+		if err = client.Gauge(m.Name, m.Value, m.Tags, m.Rate); err != nil {
+			return err
+		}
 	}
 
-	if interval.Seconds() == 0 {
-		doneChan <- true
-		return
-	}
+	return client.Flush()
 }
 
 func sendMetricsLoop(nsqdHTTPAddresses []string, lookupdHTTPAddresses []string, dogstatsdAddress string, namespace string, tags []string, excludeMetrics []*regexp.Regexp, interval time.Duration, doneChan chan bool, errChan chan error) {
@@ -92,20 +71,43 @@ func sendMetricsLoop(nsqdHTTPAddresses []string, lookupdHTTPAddresses []string, 
 		return
 	}
 
-	timeChan := time.NewTimer(0).C
-
 	log.WithField("interval", interval.String()).Info("interval set")
 
-	if interval.Seconds() > 0 {
-		// Trigger initial metrics collection instead of waiting for first tick,
-		// which could be far in the future.
-		sendMetrics(producers, client, interval, excludeMetrics, doneChan, errChan)
-		timeChan = time.NewTicker(interval).C
+	// Each node is collected on its own ticker, so that a slow node does not
+	// delay the others.
+	var wg sync.WaitGroup
+	for _, p := range producers {
+		wg.Add(1)
+
+		go func(p producer.Producer) {
+			defer wg.Done()
+
+			// Trigger initial metrics collection instead of waiting for first tick,
+			// which could be far in the future. The ticker is created first so the
+			// duration of this collection does not delay the following ones.
+			var timeChan <-chan time.Time
+			if interval.Seconds() > 0 {
+				timeChan = time.NewTicker(interval).C
+			}
+
+			for {
+				if err := collectNode(p, client, excludeMetrics); err != nil {
+					errChan <- err
+					return
+				}
+
+				if timeChan == nil {
+					return
+				}
+
+				<-timeChan
+			}
+		}(p)
 	}
 
-	for range timeChan {
-		sendMetrics(producers, client, interval, excludeMetrics, doneChan, errChan)
-	}
+	wg.Wait()
+
+	doneChan <- true
 }
 
 func main() {
