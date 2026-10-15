@@ -50,6 +50,8 @@ Usage of nsq_to_dogstatsd:
       <address>:<port> to connect to dogstatsd (default "127.0.0.1:8125")
   -exclude-metrics value
       exclude metrics using a regular expression pattern (can be specified multiple times)
+  -http-timeout duration
+      timeout for each HTTP request to nsqd and nsqlookupd (default "none")
   -interval duration
       interval for collecting metrics (default "none")
   -lookupd-http-address value

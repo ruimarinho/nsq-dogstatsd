@@ -14,6 +14,7 @@ import (
 	"github.com/ruimarinho/nsq-dogstatsd/collector"
 	"github.com/ruimarinho/nsq-dogstatsd/dogstatsd"
 	"github.com/ruimarinho/nsq-dogstatsd/internal/checker"
+	"github.com/ruimarinho/nsq-dogstatsd/internal/fetcher"
 	"github.com/ruimarinho/nsq-dogstatsd/internal/parser"
 	"github.com/ruimarinho/nsq-dogstatsd/internal/slice"
 	"github.com/ruimarinho/nsq-dogstatsd/producer"
@@ -25,6 +26,7 @@ var (
 	interval                = flag.Duration("interval", time.Duration(0), `interval for collecting metrics (default "none")`)
 	namespace               = flag.String("namespace", "nsq", "namespace for metrics")
 	dogstatsdAddress        = flag.String("dogstatsd-address", "127.0.0.1:8125", "<address>:<port> to connect to dogstatsd")
+	httpTimeout             = flag.Duration("http-timeout", time.Duration(0), `timeout for each HTTP request to nsqd and nsqlookupd (default "none")`)
 	showVersion             = flag.Bool("version", false, "show version information")
 	excludeMetricsPatterns  slice.StringSlice
 	nsqdHTTPAddresses       slice.StringSlice
@@ -133,6 +135,8 @@ func main() {
 	if err := checker.CheckAddresses(nsqlookupdHTTPAddresses); err != nil {
 		log.Fatalf("--nsqlookupd-http-address - %s", err)
 	}
+
+	fetcher.Client.Timeout = *httpTimeout
 
 	excludedMetrics, err := parser.Parse(excludeMetricsPatterns)
 	if err != nil {

@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	. "github.com/ruimarinho/nsq-dogstatsd/internal/fetcher"
 	"github.com/stretchr/testify/assert"
@@ -57,4 +58,25 @@ func TestFetcher_Fetch(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, string(body), `{"status_code": 200}`)
+}
+
+func TestFetcher_Fetch_timeout(t *testing.T) {
+	server := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			time.Sleep(200 * time.Millisecond)
+		}))
+
+	defer server.Close()
+
+	timeout := Client.Timeout
+	Client.Timeout = 50 * time.Millisecond
+	defer func() { Client.Timeout = timeout }()
+
+	nsqdURL, parseErr := url.Parse(server.URL)
+	assert.NoError(t, parseErr)
+
+	fetcher := NewFetcher(nsqdURL.Host)
+	_, err := fetcher.Fetch("")
+
+	assert.ErrorContains(t, err, "Client.Timeout exceeded")
 }
