@@ -58,6 +58,8 @@ Usage of nsq_to_dogstatsd:
       namespace for metrics (default "nsq")
   -nsqd-http-address value
       <address>:<port> of nsqd node to query stats for (can be specified multiple times)
+  -stagger
+      spread the collection of nsqd nodes evenly across -interval, instead of collecting all nodes at once (delays the first collection of each node by its offset)
   -tag value
       add global tags (can be specified multiple times)
   -verbose int

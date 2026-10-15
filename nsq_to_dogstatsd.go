@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
+	"sort"
 	"sync"
 	"syscall"
 	"time"
@@ -26,6 +27,7 @@ var (
 	namespace               = flag.String("namespace", "nsq", "namespace for metrics")
 	dogstatsdAddress        = flag.String("dogstatsd-address", "127.0.0.1:8125", "<address>:<port> to connect to dogstatsd")
 	showVersion             = flag.Bool("version", false, "show version information")
+	stagger                 = flag.Bool("stagger", false, "spread the collection of nsqd nodes evenly across -interval, instead of collecting all nodes at once (delays the first collection of each node by its offset)")
 	excludeMetricsPatterns  slice.StringSlice
 	nsqdHTTPAddresses       slice.StringSlice
 	nsqlookupdHTTPAddresses slice.StringSlice
@@ -41,41 +43,26 @@ func init() {
 	flag.Var(&nsqlookupdHTTPAddresses, "lookupd-http-address", "<address>:<port> of nsqlookupd to query nodes for (can be specified multiple times)")
 }
 
-func sendMetrics(producers []producer.Producer, client *statsd.Client, interval time.Duration, excludeMetrics []*regexp.Regexp, doneChan chan bool, errChan chan error) {
-	var wg sync.WaitGroup
-	for _, p := range producers {
-		wg.Add(1)
+// staggerOffset returns the offset of the i-th of n nodes within the interval,
+// so that the nodes are spaced evenly.
+func staggerOffset(i int, n int, interval time.Duration) time.Duration {
+	return interval * time.Duration(i) / time.Duration(n)
+}
 
-		go func(p producer.Producer) {
-			defer wg.Done()
-
-			c := collector.NewCollector(p, excludeMetrics)
-			metrics, err := c.CollectMetrics()
-			if err != nil {
-				errChan <- err
-				return
-			}
-
-			for _, m := range metrics {
-				if err = client.Gauge(m.Name, m.Value, m.Tags, m.Rate); err != nil {
-					errChan <- err
-					return
-				}
-			}
-		}(p)
+func collectNode(p producer.Producer, client *statsd.Client, excludeMetrics []*regexp.Regexp) error {
+	c := collector.NewCollector(p, excludeMetrics)
+	metrics, err := c.CollectMetrics()
+	if err != nil {
+		return err
 	}
 
-	wg.Wait()
-
-	if err := client.Flush(); err != nil {
-		errChan <- err
-		return
+	for _, m := range metrics {
+		if err = client.Gauge(m.Name, m.Value, m.Tags, m.Rate); err != nil {
+			return err
+		}
 	}
 
-	if interval.Seconds() == 0 {
-		doneChan <- true
-		return
-	}
+	return client.Flush()
 }
 
 func sendMetricsLoop(nsqdHTTPAddresses []string, lookupdHTTPAddresses []string, dogstatsdAddress string, namespace string, tags []string, excludeMetrics []*regexp.Regexp, interval time.Duration, doneChan chan bool, errChan chan error) {
@@ -92,20 +79,58 @@ func sendMetricsLoop(nsqdHTTPAddresses []string, lookupdHTTPAddresses []string, 
 		return
 	}
 
-	timeChan := time.NewTimer(0).C
-
 	log.WithField("interval", interval.String()).Info("interval set")
 
-	if interval.Seconds() > 0 {
-		// Trigger initial metrics collection instead of waiting for first tick,
-		// which could be far in the future.
-		sendMetrics(producers, client, interval, excludeMetrics, doneChan, errChan)
-		timeChan = time.NewTicker(interval).C
+	if *stagger {
+		sort.Slice(producers, func(i, j int) bool {
+			return producers[i].HTTPAddress() < producers[j].HTTPAddress()
+		})
 	}
 
-	for range timeChan {
-		sendMetrics(producers, client, interval, excludeMetrics, doneChan, errChan)
+	// Each node is collected on its own ticker, so that a slow node does not
+	// delay the others.
+	var wg sync.WaitGroup
+	for i, p := range producers {
+		var offset time.Duration
+		if *stagger {
+			offset = staggerOffset(i, len(producers), interval)
+
+			log.WithFields(log.Fields{"node": p.Hostname, "address": p.HTTPAddress(), "offset": offset.String()}).Info("staggering collection")
+		}
+
+		wg.Add(1)
+
+		go func(p producer.Producer, offset time.Duration) {
+			defer wg.Done()
+
+			time.Sleep(offset)
+
+			// Trigger initial metrics collection instead of waiting for first tick,
+			// which could be far in the future. The ticker is created first so the
+			// duration of this collection does not delay the following ones.
+			var timeChan <-chan time.Time
+			if interval.Seconds() > 0 {
+				timeChan = time.NewTicker(interval).C
+			}
+
+			for {
+				if err := collectNode(p, client, excludeMetrics); err != nil {
+					errChan <- err
+					return
+				}
+
+				if timeChan == nil {
+					return
+				}
+
+				<-timeChan
+			}
+		}(p, offset)
 	}
+
+	wg.Wait()
+
+	doneChan <- true
 }
 
 func main() {
@@ -132,6 +157,10 @@ func main() {
 
 	if err := checker.CheckAddresses(nsqlookupdHTTPAddresses); err != nil {
 		log.Fatalf("--nsqlookupd-http-address - %s", err)
+	}
+
+	if *stagger && *interval <= 0 {
+		log.Fatal("--stagger requires a positive --interval")
 	}
 
 	excludedMetrics, err := parser.Parse(excludeMetricsPatterns)
