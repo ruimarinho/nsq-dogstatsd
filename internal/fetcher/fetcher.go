@@ -6,6 +6,10 @@ import (
 	"net/http"
 )
 
+// Client is the HTTP client used for every request. Its timeout, if set,
+// covers the whole request, including reading the response body.
+var Client = &http.Client{}
+
 // Fetcher fetches the content of a URL.
 type Fetcher interface {
 	Fetch(url string) ([]byte, error)
@@ -20,7 +24,7 @@ type NSQDFetcher struct {
 
 // Fetch retrieves data from a remote resource.
 func (f NSQDFetcher) Fetch(path string) ([]byte, error) {
-	response, err := http.Get(f.GetURL(path))
+	response, err := Client.Get(f.GetURL(path))
 	if err != nil {
 		return nil, err
 	}
